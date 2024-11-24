@@ -19,7 +19,15 @@ Primeiro, clone o repositório para o seu ambiente local:
 ```bash
 git clone https://github.com/seu-usuario/seu-repositorio.git
 cd seu-repositorio
-´´´
+```
+
+### 2. Instale as bibliotecas utilizadas no código
+
+Para instalar as bibliotecas necessárias, você pode usar o pip:
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Resultados Obtidos
 
