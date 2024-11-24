@@ -3,76 +3,94 @@ import matplotlib.pyplot as plt
 
 
 class Regressor:
-    def __init__(self, input_size, hidden_layers, output_size, learning_rate=0.01):
+    def __init__(self, input_size, hidden_layers, output_size, learning_rate=0.01, activation="tanh"):
         self.learning_rate = learning_rate
+        self.activation = activation
 
-        # Inicializando pesos aleatórios
         self.weights = []
-        prev_size = input_size + 1  # Inclui o bias
+        prev_size = input_size + 1
         for layer_size in hidden_layers:
             self.weights.append(np.random.randn(layer_size, prev_size))
             prev_size = layer_size + 1
         self.weights.append(np.random.randn(output_size, prev_size))
 
-    def train(self, X, Y, epocs=100):
-        # Adiciona o bias às entradas
-        bias = 1
-        X_bias = np.hstack([np.ones((X.shape[0], 1)), X])
+    def activate(self, z):
+        if self.activation == "tanh":
+            return np.tanh(z)
+        elif self.activation == "relu":
+            return np.maximum(0, z)
+        elif self.activation == "sigmoid":
+            return 1 / (1 + np.exp(-z))
+        else:
+            raise ValueError("Função de ativação não reconhecida!")
 
-        # Lista para armazenar os erros médios
+    def activate_derivative(self, z):
+        if self.activation == "tanh":
+            return 1 - np.tanh(z) ** 2
+        elif self.activation == "relu":
+            return np.where(z > 0, 1, 0)
+        elif self.activation == "sigmoid":
+            sigmoid = 1 / (1 + np.exp(-z))
+            return sigmoid * (1 - sigmoid)
+        else:
+            raise ValueError("Função de ativação não reconhecida!")
+
+    def train(self, X, Y, epocs=100):
+        X_bias = np.hstack([np.ones((X.shape[0], 1)), X])  # add bias
         Etm = []
 
         for epoc in range(epocs):
-            E = []  # Erros de cada padrão
+            E = []
             for i in range(X.shape[0]):
-                # Apresentação do padrão
-                Xb = X_bias[i]
-
                 # Feedforward
-                # Saída da camada escondida
-                o1 = np.tanh(self.weights[0].dot(Xb))
-                # Inclui o bias para a camada de saída
-                o1b = np.insert(o1, 0, bias)
-                Y_pred = np.tanh(self.weights[1].dot(o1b))  # Saída da rede
+                z1 = np.dot(self.weights[0], X_bias[i])
+                o1 = self.activate(z1)
+                o1b = np.insert(o1, 0, 1)
 
-                # Cálculo do erro
+                z2 = np.dot(self.weights[1], o1b)
+                Y_pred = self.activate(z2)[0]
+
                 e = Y[i] - Y_pred
                 E.append((e**2) / 2)
 
-                # Backpropagation
-                delta2 = e * (1 - Y_pred**2)  # Gradiente da camada de saída
-                # Gradiente da camada escondida
-                delta1 = (1 - o1b**2) * (self.weights[1].T.dot(delta2))
+                # backpropagation
+                delta2 = e * self.activate_derivative(z2)[0]
+                delta1 = self.activate_derivative(
+                    z1) * np.dot(self.weights[1][0, 1:], delta2)
 
-                # Atualização dos pesos
-                self.weights[1] += self.learning_rate * np.outer(delta2, o1b)
-                self.weights[0] += self.learning_rate * \
-                    np.outer(delta1[1:], Xb)  # Ignorar bias
+                # att pesos
+                dw2 = self.learning_rate * delta2 * o1b
+                self.weights[1] += dw2.reshape(1, -1)
 
-            # Calcula o erro médio por época
-            Etm.append(np.mean(E))
+                dw1 = self.learning_rate * np.outer(delta1, X_bias[i])
+                self.weights[0] += dw1
 
-        # Plota o erro médio ao longo das épocas
+            # calculo do erro medio
+            error_mean = np.mean(E)
+            Etm.append(error_mean)
+
+            if epoc % 10 == 0:
+                print(f'Época {epoc}, Erro médio: {error_mean:.6f}')
+
+        plt.figure(figsize=(10, 6))
         plt.plot(Etm, label="Erro Médio")
         plt.xlabel("Épocas")
         plt.ylabel("Erro Médio")
+        plt.title(f"Evolução do Erro Médio ({self.activation})")
+        plt.grid(True)
         plt.legend()
         plt.show()
 
     def predict(self, X):
-        bias = 1
-        X_bias = np.hstack([np.ones((X.shape[0], 1)), X])  # Adiciona o bias
-        predictions = []
+        X_bias = np.hstack([np.ones((X.shape[0], 1)), X])
+        predictions = np.zeros(X.shape[0])
 
         for i in range(X_bias.shape[0]):
-            Xb = X_bias[i]  # Uma amostra por vez
-            o1 = np.tanh(self.weights[0].dot(Xb))  # Saída da camada escondida
-            # Inclui o bias para a camada de saída
-            o1b = np.insert(o1, 0, bias)
-            # Saída da rede (uma previsão por amostra)
-            Y_pred = np.tanh(self.weights[1].dot(o1b))
-            predictions.append(Y_pred)
+            z1 = np.dot(self.weights[0], X_bias[i])
+            o1 = self.activate(z1)
+            o1b = np.insert(o1, 0, 1)
 
-    # Retorna o vetor de previsões 1D
-        # Retorna uma matriz 1D para facilitar o cálculo de erro
-        return np.array(predictions).flatten()
+            z2 = np.dot(self.weights[1], o1b)
+            predictions[i] = self.activate(z2)[0]
+
+        return predictions
