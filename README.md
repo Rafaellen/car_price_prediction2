@@ -8,7 +8,7 @@ Este projeto utiliza uma rede neural para prever o preço de carros com base em 
 - **Pandas**: Manipulação e processamento de dados
 - **Scikit-learn**: Divisão dos dados em treinamento e teste, além de cálculos de métricas
 - **Matplotlib**: Visualização de dados e resultados
-- **Numpy**: Operações com matrizes e álgebra linear (caso tenha sido utilizado em funções auxiliares)
+- **Numpy**: Operações com matrizes e álgebra linear 
 
 ## Como Rodar o Projeto
 
